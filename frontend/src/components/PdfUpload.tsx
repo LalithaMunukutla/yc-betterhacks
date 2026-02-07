@@ -63,77 +63,59 @@ export default function PdfUpload({ onFileSelected, onUrlSubmitted, isLoading, l
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#fafafa]">
-      {/* Subtle top accent line */}
-      <div className="h-[2px] bg-gradient-to-r from-transparent via-gray-300 to-transparent" />
+    <div className="min-h-screen bg-white flex flex-col">
+      {/* Main content */}
+      <div className="flex-1 flex items-center justify-center px-6">
+        <div className="w-full max-w-[540px] pt-[12vh]">
 
-      <div className="flex-1 flex items-center justify-center px-4 py-16">
-        <div className="w-full max-w-lg">
-          {/* Logo + Title */}
-          <div className="text-center mb-10">
-            <div className="flex items-center justify-center gap-2.5 mb-3">
-              <svg className="w-7 h-7 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-              <h1 className="text-2xl font-semibold text-primary tracking-tight">
-                Better Papers
-              </h1>
-            </div>
-            <p className="text-secondary text-[15px]">
-              Upload a PDF to start reading with adaptive explanations.
+          {/* Heading */}
+          <div className="text-center mb-12">
+            <h1 className="font-display text-[42px] leading-[1.1] text-primary mb-3">
+              Better Papers
+            </h1>
+            <p className="text-[15px] text-gray-400 leading-relaxed">
+              Upload a research paper to start reading with adaptive explanations.
             </p>
           </div>
 
-          {/* Upload area */}
+          {/* Drop zone */}
           <div
             onDrop={handleDrop}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onClick={handleClick}
             className={`
-              relative bg-white border-2 border-dashed rounded-xl p-14 cursor-pointer
-              transition-all duration-200
+              group relative rounded-2xl cursor-pointer
+              border transition-all duration-200 ease-out
               ${isDragging
-                ? 'border-gray-400 bg-gray-50 scale-[1.01]'
-                : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50/50'
+                ? 'border-gray-300 bg-gray-50 shadow-sm'
+                : 'border-gray-200 hover:border-gray-300 hover:shadow-[0_2px_8px_rgba(0,0,0,0.04)]'
               }
-              ${isLoading ? 'opacity-50 pointer-events-none' : ''}
+              ${isLoading ? 'opacity-60 pointer-events-none' : ''}
             `}
           >
-            {isLoading ? (
-              <div className="text-center">
-                <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-                <p className="text-secondary text-sm">{loadingMessage || 'Processing PDF...'}</p>
-              </div>
-            ) : (
-              <div className="text-center">
-                <svg
-                  className="w-10 h-10 text-gray-300 mx-auto mb-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={1.5}
-                    d="M12 16v-8m0 0l-3 3m3-3l3 3"
-                  />
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={1.5}
-                    d="M20 16.7V19a2 2 0 01-2 2H6a2 2 0 01-2-2v-2.3"
-                  />
-                </svg>
-                <p className="text-primary font-medium text-[15px] mb-1">
-                  Drop your PDF here
-                </p>
-                <p className="text-secondary text-sm">
-                  or click to choose a file
-                </p>
-              </div>
-            )}
+            <div className="px-8 py-14">
+              {isLoading ? (
+                <div className="text-center">
+                  <div className="w-5 h-5 border-[1.5px] border-gray-300 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+                  <p className="text-gray-400 text-[13px]">{loadingMessage || 'Processing...'}</p>
+                </div>
+              ) : (
+                <div className="text-center">
+                  <div className="w-10 h-10 rounded-full bg-gray-50 border border-gray-150 flex items-center justify-center mx-auto mb-5 group-hover:bg-gray-100 transition-colors">
+                    <svg className="w-[18px] h-[18px] text-gray-400" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+                    </svg>
+                  </div>
+                  <p className="text-[14px] font-medium text-primary mb-1">
+                    Drop your PDF here
+                  </p>
+                  <p className="text-[13px] text-gray-400">
+                    or click to choose a file
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
 
           <input
@@ -145,14 +127,16 @@ export default function PdfUpload({ onFileSelected, onUrlSubmitted, isLoading, l
           />
 
           {/* Divider */}
-          <div className="my-8 flex items-center gap-4">
-            <div className="flex-1 h-px bg-gray-200" />
+          <div className="flex items-center gap-4 my-7">
+            <div className="flex-1 h-px bg-gray-100" />
+            <span className="text-[11px] text-gray-300 uppercase tracking-[0.15em] font-medium select-none">or</span>
+            <div className="flex-1 h-px bg-gray-100" />
           </div>
 
-          {/* URL Input */}
+          {/* URL input */}
           <div>
-            <label className="block text-sm text-secondary mb-2.5">
-              Or add from URL
+            <label className="block text-[13px] font-medium text-gray-500 mb-2">
+              Load from URL
             </label>
             <div className="flex gap-2">
               <input
@@ -162,64 +146,68 @@ export default function PdfUpload({ onFileSelected, onUrlSubmitted, isLoading, l
                 onKeyDown={handleUrlKeyDown}
                 placeholder="https://arxiv.org/pdf/1706.03762"
                 disabled={isLoading}
-                className="flex-1 px-4 py-2.5 text-sm text-primary bg-white border border-gray-200 rounded-lg placeholder-gray-400 focus:outline-none focus:border-gray-400 focus:ring-1 focus:ring-gray-200 transition-colors disabled:opacity-50"
+                className="flex-1 h-[42px] px-3.5 text-[13px] text-primary bg-white border border-gray-200 rounded-lg placeholder:text-gray-300 focus:outline-none focus:border-gray-300 focus:ring-2 focus:ring-gray-50 transition-all disabled:opacity-50"
               />
               <button
                 onClick={handleUrlSubmit}
                 disabled={isLoading || !url.trim()}
-                className="px-5 py-2.5 bg-primary text-white text-sm font-medium rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5 flex-shrink-0"
+                className="h-[42px] px-5 bg-primary text-white text-[13px] font-medium rounded-lg hover:bg-[#333] active:scale-[0.98] transition-all disabled:opacity-25 disabled:cursor-not-allowed flex items-center gap-2 flex-shrink-0"
               >
                 Load
-                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                <svg className="w-3.5 h-3.5 opacity-60" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
                 </svg>
               </button>
             </div>
-            <p className="mt-2.5 text-xs text-gray-400 flex items-center gap-1.5">
-              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
-              </svg>
-              Supports arXiv, Semantic Scholar, direct PDF links
+            <p className="mt-2 text-[11px] text-gray-300">
+              Supports arXiv, Semantic Scholar, and direct PDF links
             </p>
           </div>
 
-          {/* Features */}
-          <div className="mt-14 grid grid-cols-3 gap-4">
+          {/* Feature cards */}
+          <div className="mt-20 grid grid-cols-3 gap-px bg-gray-100 rounded-xl overflow-hidden border border-gray-100">
             <FeatureCard
+              title="Explain"
+              description="Select any text for instant contextual clarity"
               icon={
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.087.16 2.185.283 3.293.369V21l4.076-4.076a1.526 1.526 0 011.037-.443 48.282 48.282 0 005.68-.494c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z" />
                 </svg>
               }
-              title="Highlight to Explain"
-              description="Select any text to get instant contextual explanations"
             />
             <FeatureCard
+              title="Implement"
+              description="Generate working code from paper methods"
               icon={
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M17.25 6.75L22.5 12l-5.25 5.25m-10.5 0L1.5 12l5.25-5.25m7.5-3l-4.5 16.5" />
                 </svg>
               }
-              title="Implement Code"
-              description="Turn equations and algorithms into working code"
             />
             <FeatureCard
+              title="Citations"
+              description="Click references to see context instantly"
               icon={
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m9.928-2.868a4.5 4.5 0 00-6.364-6.364L4.5 8.257m7.879 2.871L8.257 15.25" />
                 </svg>
               }
-              title="Smart Citations"
-              description="Click citations to see context and relevance"
             />
           </div>
+
         </div>
       </div>
+
+      {/* Footer */}
+      <footer className="py-5 text-center flex-shrink-0">
+        <p className="text-[11px] text-gray-300">
+          Built for researchers who want to understand, not just read.
+        </p>
+      </footer>
     </div>
   );
 }
 
-/** Feature card sub-component */
 function FeatureCard({
   icon,
   title,
@@ -230,12 +218,12 @@ function FeatureCard({
   description: string;
 }) {
   return (
-    <div className="text-center px-2 py-4">
-      <div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center mx-auto mb-3 text-gray-500">
+    <div className="bg-white px-5 py-5">
+      <div className="text-gray-400 mb-2.5">
         {icon}
       </div>
-      <h3 className="text-[13px] font-medium text-primary mb-1">{title}</h3>
-      <p className="text-xs text-secondary leading-relaxed">{description}</p>
+      <h3 className="text-[12px] font-semibold text-primary mb-0.5 tracking-tight">{title}</h3>
+      <p className="text-[11px] text-gray-400 leading-[1.6]">{description}</p>
     </div>
   );
 }

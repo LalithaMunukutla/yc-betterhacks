@@ -13,8 +13,8 @@ module.exports = {
         success: '#10b981',
       },
       fontFamily: {
-        sans: ['SF Pro', 'Segoe UI', 'Inter', 'system-ui', 'sans-serif'],
-        serif: ['Georgia', 'Times New Roman', 'serif'],
+        sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'system-ui', 'sans-serif'],
+        display: ['Instrument Serif', 'Georgia', 'Times New Roman', 'serif'],
         mono: ['JetBrains Mono', 'SF Mono', 'Consolas', 'monospace'],
       },
     },
