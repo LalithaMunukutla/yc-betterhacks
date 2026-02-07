@@ -1,16 +1,26 @@
-import React, { useRef, useEffect, useMemo, useState } from 'react';
+import React, { useRef, useEffect, useMemo, useState, useCallback } from 'react';
 import { Document, Page, pdfjs } from 'react-pdf';
 import { parsePaperContent, ContentBlock } from '../utils/parsePaper';
 import type { OutlineItem } from './OutlineSidebar';
+import type { CitationSummary, CitationDetail } from '../services/api';
+import CitationText from './CitationText';
+import CitationPopover from './CitationPopover';
 
 interface PaperViewerProps {
   paperText: string;
   paperTitle: string;
   pdfUrl?: string;
   numPages?: number;
+  paperId?: string | null;
+  citations?: CitationSummary[];
   onOutlineExtracted?: (outline: OutlineItem[]) => void;
   onSectionChange?: (sectionId: string) => void;
   scrollToSectionId?: string | null;
+}
+
+interface PopoverTarget {
+  citationKey: string;
+  anchorEl: HTMLElement;
 }
 
 export default function PaperViewer({
@@ -18,6 +28,8 @@ export default function PaperViewer({
   paperTitle,
   pdfUrl,
   numPages,
+  paperId,
+  citations = [],
   onOutlineExtracted,
   onSectionChange,
   scrollToSectionId,
@@ -26,6 +38,27 @@ export default function PaperViewer({
   const hasReportedOutline = useRef(false);
   const [viewMode, setViewMode] = useState<'clean' | 'pdf'>('clean');
   const [pdfNumPages, setPdfNumPages] = useState<number | null>(numPages ?? null);
+  const [popover, setPopover] = useState<PopoverTarget | null>(null);
+  const citationCacheRef = useRef<Map<string, CitationDetail>>(new Map());
+
+  // Derive citation keys set from citations prop
+  const citationKeys = useMemo(
+    () => new Set(citations.map((c) => c.citationKey)),
+    [citations],
+  );
+
+  const handleCitationClick = useCallback(
+    (citationKey: string, anchorEl: HTMLElement) => {
+      setPopover((prev) =>
+        prev?.citationKey === citationKey ? null : { citationKey, anchorEl },
+      );
+    },
+    [],
+  );
+
+  const handlePopoverClose = useCallback(() => {
+    setPopover(null);
+  }, []);
 
   // Parse paper text into structured blocks + outline
   const { blocks, outline } = useMemo(() => {
@@ -84,6 +117,7 @@ export default function PaperViewer({
   }, [blocks, outline, onSectionChange]);
 
   return (
+    <>
     <div ref={containerRef} className="flex-1 overflow-y-auto bg-[#f7f7f8]">
       <div className="max-w-[920px] mx-auto py-8 px-8">
         <div className="flex items-center justify-between mb-6">
@@ -127,7 +161,12 @@ export default function PaperViewer({
         ) : (
           <article className="max-w-[720px] mx-auto py-4">
             {blocks.map((block) => (
-              <BlockRenderer key={block.id} block={block} />
+              <BlockRenderer
+                key={block.id}
+                block={block}
+                citationKeys={citationKeys}
+                onCitationClick={handleCitationClick}
+              />
             ))}
 
             {/* Bottom spacer */}
@@ -136,12 +175,33 @@ export default function PaperViewer({
         )}
       </div>
     </div>
+
+    {popover && paperId && (
+      <CitationPopover
+        paperId={paperId}
+        citationKey={popover.citationKey}
+        anchorEl={popover.anchorEl}
+        onClose={handlePopoverClose}
+        cache={citationCacheRef}
+      />
+    )}
+    </>
   );
 }
 
 // ── Block Renderer ──
 
-function BlockRenderer({ block }: { block: ContentBlock }) {
+function BlockRenderer({
+  block,
+  citationKeys,
+  onCitationClick,
+}: {
+  block: ContentBlock;
+  citationKeys: ReadonlySet<string>;
+  onCitationClick: (key: string, anchorEl: HTMLElement) => void;
+}) {
+  const hasCitations = citationKeys.size > 0;
+
   switch (block.type) {
     case 'title':
       return (
@@ -174,7 +234,15 @@ function BlockRenderer({ block }: { block: ContentBlock }) {
     case 'abstract-paragraph':
       return (
         <p className="text-[15px] text-primary leading-[1.85] mb-4 pl-4 border-l-2 border-gray-200">
-          {block.content}
+          {hasCitations ? (
+            <CitationText
+              text={block.content}
+              citationKeys={citationKeys}
+              onCitationClick={onCitationClick}
+            />
+          ) : (
+            block.content
+          )}
         </p>
       );
 
@@ -201,7 +269,15 @@ function BlockRenderer({ block }: { block: ContentBlock }) {
     case 'paragraph':
       return (
         <p className="text-[15px] text-primary leading-[1.85] mb-4">
-          {block.content}
+          {hasCitations ? (
+            <CitationText
+              text={block.content}
+              citationKeys={citationKeys}
+              onCitationClick={onCitationClick}
+            />
+          ) : (
+            block.content
+          )}
         </p>
       );
 

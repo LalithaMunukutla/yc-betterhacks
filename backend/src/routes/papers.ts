@@ -2,6 +2,7 @@ import { Router } from 'express'
 import { uploadPdf } from '../middleware/upload'
 import {
   uploadPaper,
+  storePaper,
   getPaper,
   getCitationContext,
   getPaperText,
@@ -10,6 +11,7 @@ import {
 const router = Router()
 
 router.post('/upload', uploadPdf, uploadPaper)
+router.post('/store', storePaper)
 router.get('/:paperId', getPaper)
 router.get('/:paperId/citations/:citationKey', getCitationContext)
 router.get('/:paperId/text', getPaperText)

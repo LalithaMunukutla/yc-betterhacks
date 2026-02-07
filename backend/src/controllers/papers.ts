@@ -14,6 +14,11 @@ import {
 } from '../db/queries/citations'
 import { enrichCitation } from '../services/citation-enrichment'
 
+const storePaperSchema = z.object({
+  text: z.string().min(1),
+  title: z.string().min(1),
+})
+
 const paperIdSchema = z.object({
   paperId: z.string().uuid(),
 })
@@ -58,6 +63,54 @@ export async function uploadPaper(
         pageCount,
         citationCount: citations.length,
         createdAt: paper.created_at,
+      },
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
+export async function storePaper(
+  req: Request,
+  res: Response<ApiResponse<unknown>>,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    const { text, title } = storePaperSchema.parse(req.body)
+    const { citations } = extractCitations(text)
+
+    const paper = await withTransaction(async (client) => {
+      const p = await insertPaper({
+        title,
+        authors: null,
+        year: null,
+        rawText: text,
+      }, client)
+
+      await insertCitations(p.id, citations, client)
+
+      // Embeddings are best-effort — don't fail the request
+      try {
+        await embedAndStoreChunks(p.id, text, client)
+      } catch {
+        // Silently skip embedding failures
+      }
+
+      return p
+    })
+
+    const storedCitations = await findCitationsByPaperId(paper.id)
+
+    res.status(201).json({
+      success: true,
+      data: {
+        id: paper.id,
+        title: paper.title,
+        citationCount: citations.length,
+        citations: storedCitations.map((c) => ({
+          citationKey: c.citation_key,
+          rawReference: c.raw_reference,
+        })),
       },
     })
   } catch (error) {
