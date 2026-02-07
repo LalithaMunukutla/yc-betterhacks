@@ -3,7 +3,7 @@ import PdfUpload from './components/PdfUpload';
 import PaperViewer from './components/PaperViewer';
 import Toolbar from './components/Toolbar';
 import ImplementPanel from './components/ImplementPanel';
-import { extractPdf, implementPaper } from './services/api';
+import { extractPdf, implementPaper, StepProgress } from './services/api';
 
 // Types for the implementation result
 interface ImplementationResult {
@@ -61,8 +61,9 @@ export default function App() {
   // Loading states
   const [isUploading, setIsUploading] = useState(false);
   const [isImplementing, setIsImplementing] = useState(false);
+  const [currentStep, setCurrentStep] = useState<StepProgress | null>(null);
 
-  // Implementation result (used in Step 6)
+  // Implementation result
   const [implementResult, setImplementResult] = useState<ImplementationResult | null>(null);
   const [implementError, setImplementError] = useState<string>('');
 
@@ -97,9 +98,12 @@ export default function App() {
     setIsImplementing(true);
     setImplementError('');
     setImplementResult(null);
+    setCurrentStep(null);
 
     try {
-      const result = await implementPaper(paperText);
+      const result = await implementPaper(paperText, (step) => {
+        setCurrentStep(step);
+      });
       setImplementResult(result);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to generate implementation';
@@ -147,11 +151,50 @@ export default function App() {
         {(implementResult || isImplementing || implementError) && (
           <div className="w-[480px] border-l border-border flex flex-col bg-white flex-shrink-0">
             {isImplementing && (
-              <div className="flex-1 flex items-center justify-center">
-                <div className="text-center">
-                  <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-                  <p className="text-sm font-medium text-primary">Generating implementation...</p>
-                  <p className="text-xs text-secondary mt-1">This may take 20-30 seconds</p>
+              <div className="flex-1 flex items-center justify-center px-8">
+                <div className="w-full max-w-xs">
+                  <p className="text-sm font-medium text-primary mb-6 text-center">
+                    Generating implementation
+                  </p>
+                  <div className="space-y-3">
+                    {[
+                      { step: 1, label: 'Analyzing paper' },
+                      { step: 2, label: 'Creating implementation plan' },
+                      { step: 3, label: 'Generating notebook' },
+                      { step: 4, label: 'Uploading to Colab' },
+                    ].map(({ step, label }) => {
+                      const isActive = currentStep?.step === step && !currentStep?.done;
+                      const isDone = currentStep ? (
+                        currentStep.step > step || (currentStep.step === step && currentStep.done)
+                      ) : false;
+                      const isPending = !currentStep || currentStep.step < step;
+
+                      return (
+                        <div key={step} className="flex items-center gap-3">
+                          <div className="w-5 h-5 flex items-center justify-center flex-shrink-0">
+                            {isDone && (
+                              <svg className="w-4 h-4 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                              </svg>
+                            )}
+                            {isActive && (
+                              <div className="w-3.5 h-3.5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                            )}
+                            {isPending && (
+                              <div className="w-2 h-2 rounded-full bg-gray-200" />
+                            )}
+                          </div>
+                          <span className={`text-sm ${
+                            isActive ? 'text-primary font-medium' :
+                            isDone ? 'text-secondary' :
+                            'text-gray-300'
+                          }`}>
+                            {label}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
             )}

@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { runFullPipeline } from '../services/claude';
+import { analyzePaper, createImplementationPlan, generateNotebook } from '../services/claude';
 import { uploadNotebookToGist } from '../services/gist';
 import { getCache, setCache } from '../services/cache';
 
@@ -17,50 +17,74 @@ interface ImplementResult {
 }
 
 /**
+ * Sends an SSE event to the client.
+ */
+function sendEvent(res: Response, event: string, data: unknown): void {
+  res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+}
+
+/**
  * POST /api/implement-paper
  *
- * Accepts the extracted paper text and runs the full pipeline:
- * 1. Check cache — if this paper was processed before, return instantly
- * 2. Analyze the paper (Claude)
- * 3. Create an implementation plan (Claude)
- * 4. Generate a Colab notebook (Claude)
- * 5. Upload the notebook to GitHub Gist
- * 6. Cache the result and return everything
+ * Uses Server-Sent Events to stream progress updates to the frontend.
+ * Steps: check cache → analyze → plan → generate notebook → upload gist
  */
 router.post('/implement-paper', async (req: Request, res: Response) => {
+  const { paperText } = req.body;
+
+  if (!paperText || typeof paperText !== 'string') {
+    res.status(400).json({ error: 'Missing "paperText" in request body.' });
+    return;
+  }
+
+  if (paperText.length < 100) {
+    res.status(400).json({ error: 'Paper text is too short. Please provide the full paper text.' });
+    return;
+  }
+
+  // Check cache first — return normal JSON (no SSE needed)
+  const cached = getCache<ImplementResult>(paperText);
+  if (cached) {
+    console.log('[Implement] Returning cached result (instant)');
+    res.json({ success: true, data: cached });
+    return;
+  }
+
+  // Set up SSE headers
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.flushHeaders();
+
   try {
-    const { paperText } = req.body;
-
-    if (!paperText || typeof paperText !== 'string') {
-      res.status(400).json({ error: 'Missing "paperText" in request body.' });
-      return;
-    }
-
-    if (paperText.length < 100) {
-      res.status(400).json({ error: 'Paper text is too short. Please provide the full paper text.' });
-      return;
-    }
-
-    // Check cache first
-    const cached = getCache<ImplementResult>(paperText);
-    if (cached) {
-      console.log('[Implement] Returning cached result (instant)');
-      res.json({ success: true, data: cached });
-      return;
-    }
-
-    console.log(`[Implement] Starting pipeline for paper (${paperText.length} chars)...`);
     const startTime = Date.now();
 
-    // Run the 3-step Claude pipeline
-    const { analysis, plan, notebook } = await runFullPipeline(paperText);
+    // Step 1: Analyze paper
+    sendEvent(res, 'step', { step: 1, total: 4, message: 'Analyzing paper' });
+    console.log('[Pipeline] Step 1/4: Analyzing paper...');
+    const analysis = await analyzePaper(paperText);
+    sendEvent(res, 'step', { step: 1, total: 4, message: 'Analyzing paper', done: true });
 
-    // Upload to GitHub Gist
-    console.log('[Implement] Uploading notebook to Gist...');
+    // Step 2: Create implementation plan
+    sendEvent(res, 'step', { step: 2, total: 4, message: 'Creating implementation plan' });
+    console.log('[Pipeline] Step 2/4: Creating implementation plan...');
+    const plan = await createImplementationPlan(paperText, analysis);
+    sendEvent(res, 'step', { step: 2, total: 4, message: 'Creating implementation plan', done: true });
+
+    // Step 3: Generate notebook
+    sendEvent(res, 'step', { step: 3, total: 4, message: 'Generating notebook' });
+    console.log('[Pipeline] Step 3/4: Generating notebook...');
+    const notebook = await generateNotebook(paperText, analysis, plan);
+    sendEvent(res, 'step', { step: 3, total: 4, message: 'Generating notebook', done: true });
+
+    // Step 4: Upload to Gist
+    sendEvent(res, 'step', { step: 4, total: 4, message: 'Uploading to Colab' });
+    console.log('[Pipeline] Step 4/4: Uploading to Gist...');
     const gist = await uploadNotebookToGist(notebook.notebookJson, notebook.colabTitle);
+    sendEvent(res, 'step', { step: 4, total: 4, message: 'Uploading to Colab', done: true });
 
     const duration = ((Date.now() - startTime) / 1000).toFixed(1);
-    console.log(`[Implement] Pipeline complete in ${duration}s`);
+    console.log(`[Pipeline] Complete in ${duration}s`);
 
     const responseData: ImplementResult = {
       colabUrl: gist.colabUrl,
@@ -96,18 +120,17 @@ router.post('/implement-paper', async (req: Request, res: Response) => {
       },
     };
 
-    // Cache the result for instant replay
+    // Cache the result
     setCache(paperText, responseData);
 
-    res.json({ success: true, data: responseData });
+    // Send the final result
+    sendEvent(res, 'result', responseData);
+    res.end();
   } catch (error) {
-    console.error('[Implement] Pipeline error:', error);
-
+    console.error('[Pipeline] Error:', error);
     const message = error instanceof Error ? error.message : 'Unknown error occurred';
-    res.status(500).json({
-      error: 'Failed to generate implementation.',
-      detail: message,
-    });
+    sendEvent(res, 'error', { error: 'Failed to generate implementation.', detail: message });
+    res.end();
   }
 });
 

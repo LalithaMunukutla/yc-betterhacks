@@ -27,9 +27,19 @@ export async function extractPdf(file: File): Promise<{
 }
 
 /**
- * Sends paper text to the backend to generate a Colab implementation.
+ * Step progress update from the backend.
  */
-export async function implementPaper(paperText: string): Promise<{
+export interface StepProgress {
+  step: number;
+  total: number;
+  message: string;
+  done?: boolean;
+}
+
+/**
+ * The full implementation result.
+ */
+export interface ImplementResult {
   colabUrl: string;
   gistUrl: string;
   downloadUrl: string;
@@ -66,7 +76,18 @@ export async function implementPaper(paperText: string): Promise<{
     markdownCells: number;
     pipelineDurationSeconds: number;
   };
-}> {
+}
+
+/**
+ * Sends paper text to the backend to generate a Colab implementation.
+ * Supports two response formats:
+ *   - Normal JSON (when result is cached — instant)
+ *   - SSE stream (when pipeline runs — live step updates)
+ */
+export async function implementPaper(
+  paperText: string,
+  onStepUpdate?: (progress: StepProgress) => void
+): Promise<ImplementResult> {
   const response = await fetch(`${API_BASE}/api/implement-paper`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -78,6 +99,80 @@ export async function implementPaper(paperText: string): Promise<{
     throw new Error(error.error || `Implementation failed with status ${response.status}`);
   }
 
-  const result = await response.json();
-  return result.data;
+  const contentType = response.headers.get('content-type') || '';
+
+  // Cached result — normal JSON response
+  if (contentType.includes('application/json')) {
+    const result = await response.json();
+    return result.data;
+  }
+
+  // SSE stream — parse events
+  return new Promise<ImplementResult>((resolve, reject) => {
+    const reader = response.body?.getReader();
+    if (!reader) {
+      reject(new Error('No response body'));
+      return;
+    }
+
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    function processEvents() {
+      // Split buffer into complete events (separated by double newline)
+      const parts = buffer.split('\n\n');
+      // Keep the last part as buffer (may be incomplete)
+      buffer = parts.pop() || '';
+
+      for (const part of parts) {
+        if (!part.trim()) continue;
+
+        let eventType = 'message';
+        let eventData = '';
+
+        for (const line of part.split('\n')) {
+          if (line.startsWith('event: ')) {
+            eventType = line.substring(7);
+          } else if (line.startsWith('data: ')) {
+            eventData = line.substring(6);
+          }
+        }
+
+        if (!eventData) continue;
+
+        try {
+          const parsed = JSON.parse(eventData);
+
+          if (eventType === 'step' && onStepUpdate) {
+            onStepUpdate(parsed as StepProgress);
+          } else if (eventType === 'result') {
+            resolve(parsed as ImplementResult);
+          } else if (eventType === 'error') {
+            reject(new Error(parsed.detail || parsed.error || 'Pipeline failed'));
+          }
+        } catch {
+          // Ignore unparseable events
+        }
+      }
+    }
+
+    function read(): void {
+      reader!.read().then(({ done, value }) => {
+        if (done) {
+          // Process any remaining buffer
+          if (buffer.trim()) {
+            buffer += '\n\n';
+            processEvents();
+          }
+          return;
+        }
+
+        buffer += decoder.decode(value, { stream: true });
+        processEvents();
+        read();
+      }).catch(reject);
+    }
+
+    read();
+  });
 }
