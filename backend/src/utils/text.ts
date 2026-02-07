@@ -6,14 +6,17 @@ export function chunkText(
   chunkSize: number = DEFAULT_CHUNK_SIZE,
   overlap: number = DEFAULT_CHUNK_OVERLAP,
 ): readonly string[] {
+  const safeChunkSize = Math.max(1, chunkSize)
+  const safeOverlap = Math.max(0, Math.min(overlap, safeChunkSize - 1))
+
   const words = text.split(/\s+/)
   const chunks: string[] = []
   let start = 0
 
   while (start < words.length) {
-    const end = Math.min(start + chunkSize, words.length)
+    const end = Math.min(start + safeChunkSize, words.length)
     chunks.push(words.slice(start, end).join(' '))
-    start += chunkSize - overlap
+    start += safeChunkSize - safeOverlap
   }
 
   return chunks
