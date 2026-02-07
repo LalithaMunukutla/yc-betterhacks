@@ -19,7 +19,12 @@ export async function insertPaper(params: {
     `INSERT INTO papers (title, authors, year, raw_text)
      VALUES ($1, $2, $3, $4)
      RETURNING *`,
-    [params.title, JSON.stringify(params.authors), params.year, params.rawText],
+    [
+      params.title,
+      params.authors === null ? null : JSON.stringify(params.authors),
+      params.year,
+      params.rawText,
+    ],
   )
   return rows[0]
 }

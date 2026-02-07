@@ -45,7 +45,14 @@ export async function insertCitations(
 
 export async function findCitationsByPaperId(paperId: string): Promise<readonly CitationRow[]> {
   return query<CitationRow>(
-    `SELECT * FROM citations WHERE paper_id = $1 ORDER BY citation_key`,
+    `SELECT * FROM citations
+      WHERE paper_id = $1
+      ORDER BY
+        CASE
+          WHEN citation_key ~ '^[0-9]+$' THEN citation_key::integer
+          ELSE NULL
+        END,
+        citation_key`,
     [paperId],
   )
 }
