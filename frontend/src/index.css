@@ -4,7 +4,7 @@
 
 body {
   margin: 0;
-  font-family: 'SF Pro', 'Segoe UI', 'Inter', system-ui, sans-serif;
+  font-family: 'Inter', 'SF Pro', 'Segoe UI', system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   background-color: #ffffff;
@@ -13,4 +13,34 @@ body {
 
 code {
   font-family: 'JetBrains Mono', 'SF Mono', Consolas, monospace;
+}
+
+/* Smooth focus transitions */
+input:focus,
+button:focus-visible {
+  outline: none;
+}
+
+/* Selection color */
+::selection {
+  background: rgba(26, 26, 26, 0.08);
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af;
 }

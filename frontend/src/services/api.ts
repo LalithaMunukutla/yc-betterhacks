@@ -27,6 +27,42 @@ export async function extractPdf(file: File): Promise<{
 }
 
 /**
+ * Fetches a PDF from a URL via the backend and returns extracted text + PDF blob URL.
+ */
+export async function extractPdfFromUrl(url: string): Promise<{
+  text: string;
+  numPages: number;
+  title: string;
+  characterCount: number;
+  pdfBlobUrl: string;
+}> {
+  const response = await fetch(`${API_BASE}/api/extract-pdf-url`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ url }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: 'Failed to load PDF from URL' }));
+    throw new Error(error.error || `Failed to load PDF from URL (status ${response.status})`);
+  }
+
+  const result = await response.json();
+  const { text, numPages, title, characterCount, pdfBase64 } = result.data;
+
+  // Convert base64 PDF to a blob URL for the viewer
+  const binaryString = atob(pdfBase64);
+  const bytes = new Uint8Array(binaryString.length);
+  for (let i = 0; i < binaryString.length; i++) {
+    bytes[i] = binaryString.charCodeAt(i);
+  }
+  const blob = new Blob([bytes], { type: 'application/pdf' });
+  const pdfBlobUrl = URL.createObjectURL(blob);
+
+  return { text, numPages, title, characterCount, pdfBlobUrl };
+}
+
+/**
  * Step progress update from the backend.
  */
 export interface StepProgress {

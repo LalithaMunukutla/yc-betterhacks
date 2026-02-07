@@ -3,7 +3,7 @@ import PdfUpload from './components/PdfUpload';
 import PaperViewer from './components/PaperViewer';
 import Toolbar from './components/Toolbar';
 import ImplementPanel from './components/ImplementPanel';
-import { extractPdf, implementPaper, StepProgress } from './services/api';
+import { extractPdf, extractPdfFromUrl, implementPaper, StepProgress } from './services/api';
 
 // Types for the implementation result
 interface ImplementationResult {
@@ -60,6 +60,7 @@ export default function App() {
 
   // Loading states
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadMessage, setUploadMessage] = useState('');
   const [isImplementing, setIsImplementing] = useState(false);
   const [currentStep, setCurrentStep] = useState<StepProgress | null>(null);
 
@@ -70,6 +71,7 @@ export default function App() {
   // Handle PDF file selection
   const handleFileSelected = useCallback(async (file: File) => {
     setIsUploading(true);
+    setUploadMessage('Extracting text from PDF...');
     setImplementError('');
 
     try {
@@ -88,6 +90,29 @@ export default function App() {
       alert(message);
     } finally {
       setIsUploading(false);
+      setUploadMessage('');
+    }
+  }, []);
+
+  // Handle URL submission
+  const handleUrlSubmitted = useCallback(async (url: string) => {
+    setIsUploading(true);
+    setUploadMessage('Fetching PDF from URL...');
+    setImplementError('');
+
+    try {
+      const result = await extractPdfFromUrl(url);
+      setPdfUrl(result.pdfBlobUrl);
+      setPaperText(result.text);
+      setPaperTitle(result.title || new URL(url).pathname.split('/').pop() || 'Research Paper');
+      setNumPages(result.numPages);
+      setAppState('reading');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to load PDF from URL';
+      alert(message);
+    } finally {
+      setIsUploading(false);
+      setUploadMessage('');
     }
   }, []);
 
@@ -127,7 +152,14 @@ export default function App() {
 
   // Upload screen
   if (appState === 'upload') {
-    return <PdfUpload onFileSelected={handleFileSelected} isLoading={isUploading} />;
+    return (
+      <PdfUpload
+        onFileSelected={handleFileSelected}
+        onUrlSubmitted={handleUrlSubmitted}
+        isLoading={isUploading}
+        loadingMessage={uploadMessage}
+      />
+    );
   }
 
   // Reading screen with PDF viewer
