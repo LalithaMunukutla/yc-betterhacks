@@ -1,7 +1,9 @@
 import express, { Request, Response } from 'express';
+import { config } from './config';
+import pdfRoutes from './routes/pdf';
+import implementRoutes from './routes/implement';
 
 const app = express();
-const PORT = process.env.PORT || 3001;
 
 // Middleware
 app.use(express.json());
@@ -24,13 +26,12 @@ app.get('/health', (req: Request, res: Response) => {
   res.json({ status: 'ok', message: 'Better Papers API is running' });
 });
 
-// Example API endpoint
-app.get('/api/test', (req: Request, res: Response) => {
-  res.json({ message: 'Backend API is working!' });
-});
+// Routes
+app.use('/api', pdfRoutes);
+app.use('/api', implementRoutes);
 
 // Start server
-app.listen(PORT, () => {
-  console.log(`🚀 Server running on http://localhost:${PORT}`);
-  console.log(`📡 Health check: http://localhost:${PORT}/health`);
+app.listen(config.port, () => {
+  console.log(`Server running on http://localhost:${config.port}`);
+  console.log(`Health check: http://localhost:${config.port}/health`);
 });
