@@ -194,6 +194,7 @@ export default function PaperViewer({
   }, [blocks, outline, onSectionChange]);
 
   return (
+    <>
     <div ref={containerRef} className="flex-1 flex min-h-0 bg-[#f7f7f8]">
       <div className="flex-1 overflow-y-auto min-w-0">
         <div className="max-w-[920px] mx-auto py-8 px-8">
@@ -313,7 +314,7 @@ export default function PaperViewer({
       )}
     </div>
 
-    {popover && paperId && (
+    {popover && paperId != null && (
       <CitationPopover
         paperId={paperId}
         citationKey={popover.citationKey}

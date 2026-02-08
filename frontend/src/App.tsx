@@ -4,7 +4,6 @@ import PaperViewer from './components/PaperViewer';
 import OutlineSidebar, { OutlineItem } from './components/OutlineSidebar';
 import Toolbar from './components/Toolbar';
 import ImplementPanel from './components/ImplementPanel';
-import { uploadPdf } from './api';
 import {
   extractPdf,
   extractPdfFromUrl,
@@ -83,8 +82,7 @@ export default function App() {
   const [implementResult, setImplementResult] = useState<ImplementationResult | null>(null);
   const [implementError, setImplementError] = useState<string>('');
 
-  // Citation state
-  const [paperId, setPaperId] = useState<string | null>(null);
+  // Citation state (paperId is set above; citations from storePaper)
   const [citations, setCitations] = useState<CitationSummary[]>([]);
 
   // Panel visibility
@@ -117,10 +115,9 @@ export default function App() {
       setPaperText(extractedText);
       setPaperTitle(extractedTitle);
       setPaperNumPages(result.numPages || 0);
-      setPaperId(uploadResult?.paperId ?? null);
       setAppState('reading');
 
-      // Fire-and-forget: store paper for citation extraction
+      // Fire-and-forget: store paper for citation extraction (sets paperId when done)
       storePaper(extractedText, extractedTitle)
         .then((stored) => {
           setPaperId(stored.id);
