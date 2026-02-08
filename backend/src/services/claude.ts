@@ -1,45 +1,18 @@
-import Anthropic from '@anthropic-ai/sdk'
-import { config } from '../config';
-import { buildNotebook, notebookToString, NotebookCell } from './notebookBuilder';
+import Anthropic from "@anthropic-ai/sdk";
+import { config } from "../config";
+import {
+  buildNotebook,
+  notebookToString,
+  NotebookCell,
+} from "./notebookBuilder";
 
 // ─── Claude Client ───────────────────────────────────────────────────────────
 
-const anthropic = new Anthropic({
+const MODEL = "claude-sonnet-4-20250514";
+
+const client = new Anthropic({
   apiKey: config.anthropicApiKey,
 });
-
-const MODEL = 'claude-sonnet-4-20250514';
-
-export async function explainCitationRelevance(params: {
-  contextInPaper: string
-  citedTitle: string | null
-  citedAbstract: string | null
-  rawReference: string | null
-}): Promise<string> {
-  const citedInfo = params.citedTitle
-    ? `Cited paper title: "${params.citedTitle}"\nCited paper abstract: "${params.citedAbstract ?? 'Not available'}"`
-    : `Raw reference: "${params.rawReference ?? 'Not available'}"`
-
-  const response = await anthropic.messages.create({
-    model: MODEL,
-    max_tokens: 300,
-    messages: [
-      {
-        role: 'user',
-        content: `You are an academic paper reading assistant. Given the following context from a research paper where a citation appears, and information about the cited paper, explain in 2-3 sentences why this citation is relevant and what the reader should know about the cited work in this context.
-
-Source paper context: "${params.contextInPaper}"
-
-${citedInfo}
-
-Explain the relevance concisely. Do not use phrases like "This citation" or "The cited paper" — refer to the work by its subject matter directly.`,
-      },
-    ],
-  })
-
-  const textBlock = response.content.find((block) => block.type === 'text')
-  return textBlock?.text ?? 'Unable to generate explanation.'
-}
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -78,7 +51,7 @@ export interface PaperAnalysis {
   }>;
   evaluationMetrics: string[];
   requiredLibraries: string[];
-  paperComplexity: 'low' | 'medium' | 'high';
+  paperComplexity: "low" | "medium" | "high";
 }
 
 export interface ImplementationPlan {
@@ -97,6 +70,63 @@ export interface ImplementationPlan {
   totalEstimatedLines: number;
 }
 
+export async function askClaude(prompt: string): Promise<string> {
+  const message = await client.messages.create({
+    model: MODEL,
+    max_tokens: 1024,
+    messages: [{ role: "user", content: prompt }],
+  });
+  const textBlock = message.content.find((block) => block.type === "text");
+  return textBlock && "text" in textBlock ? textBlock.text : "";
+}
+
+export async function askClaudeWithConversation(
+  system: string,
+  messages: Array<{ role: "user" | "assistant"; content: string }>,
+): Promise<string> {
+  const response = await client.messages.create({
+    model: MODEL,
+    max_tokens: 1024,
+    system,
+    messages: messages.map((m) => ({ role: m.role, content: m.content })),
+  });
+  const textBlock = response.content.find((block) => block.type === "text");
+  return textBlock && "text" in textBlock ? textBlock.text : "";
+}
+
+export async function explainCitationRelevance(params: {
+  contextInPaper: string;
+  citedTitle: string | null;
+  citedAbstract: string | null;
+  rawReference: string | null;
+}): Promise<string> {
+  const citedInfo = params.citedTitle
+    ? `Cited paper title: "${params.citedTitle}"\nCited paper abstract: "${params.citedAbstract ?? "Not available"}"`
+    : `Raw reference: "${params.rawReference ?? "Not available"}"`;
+
+  const response = await client.messages.create({
+    model: MODEL,
+    max_tokens: 300,
+    messages: [
+      {
+        role: "user",
+        content: `You are an academic paper reading assistant. Given the following context from a research paper where a citation appears, and information about the cited paper, explain in 2-3 sentences why this citation is relevant and what the reader should know about the cited work in this context.
+
+Source paper context: "${params.contextInPaper}"
+
+${citedInfo}
+
+Explain the relevance concisely. Do not use phrases like "This citation" or "The cited paper" — refer to the work by its subject matter directly.`,
+      },
+    ],
+  });
+
+  const textBlock = response.content.find((block) => block.type === "text");
+  return textBlock && "text" in textBlock
+    ? textBlock.text
+    : "Unable to generate explanation.";
+}
+
 export interface GeneratedNotebook {
   notebookJson: string;
   cells: NotebookCell[];
@@ -106,19 +136,21 @@ export interface GeneratedNotebook {
 /**
  * Helper: sends a prompt to Claude and returns the text response.
  */
-async function callClaude(systemPrompt: string, userPrompt: string, maxTokens: number = 4096): Promise<string> {
-  const message = await anthropic.messages.create({
+async function callClaude(
+  systemPrompt: string,
+  userPrompt: string,
+  maxTokens: number = 4096,
+): Promise<string> {
+  const message = await client.messages.create({
     model: MODEL,
     max_tokens: maxTokens,
     system: systemPrompt,
-    messages: [
-      { role: 'user', content: userPrompt },
-    ],
+    messages: [{ role: "user", content: userPrompt }],
   });
 
-  const textBlock = message.content.find((block) => block.type === 'text');
-  if (!textBlock || textBlock.type !== 'text') {
-    throw new Error('Claude returned no text response');
+  const textBlock = message.content.find((block) => block.type === "text");
+  if (!textBlock || textBlock.type !== "text") {
+    throw new Error("Claude returned no text response");
   }
 
   return textBlock.text;
@@ -155,10 +187,10 @@ function extractJson<T>(text: string): T {
   }
 
   // Recovery: if it's a truncated JSON array, find the last complete object
-  if (jsonString.startsWith('[')) {
+  if (jsonString.startsWith("[")) {
     // Find the last occurrence of }\n  , or },\n which indicates end of a complete object in the array
-    const lastCompleteObj = jsonString.lastIndexOf('}\n');
-    const lastCompleteObj2 = jsonString.lastIndexOf('},');
+    const lastCompleteObj = jsonString.lastIndexOf("}\n");
+    const lastCompleteObj2 = jsonString.lastIndexOf("},");
 
     const cutPoint = Math.max(lastCompleteObj, lastCompleteObj2);
 
@@ -166,11 +198,13 @@ function extractJson<T>(text: string): T {
       // Cut at the end of the last complete object and close the array
       let recovered = jsonString.substring(0, cutPoint + 1); // include the }
       // Remove trailing comma if present
-      recovered = recovered.replace(/,\s*$/, '');
-      recovered += ']';
+      recovered = recovered.replace(/,\s*$/, "");
+      recovered += "]";
 
       try {
-        console.log(`[JSON Recovery] Truncated response recovered. Cut at position ${cutPoint}/${jsonString.length}`);
+        console.log(
+          `[JSON Recovery] Truncated response recovered. Cut at position ${cutPoint}/${jsonString.length}`,
+        );
         return JSON.parse(recovered) as T;
       } catch {
         // Recovery failed too
@@ -178,14 +212,21 @@ function extractJson<T>(text: string): T {
     }
   }
 
-  console.error('Failed to parse Claude JSON response. Raw text:', text.substring(0, 500));
-  throw new Error('Claude returned invalid JSON. Please try again.');
+  console.error(
+    "Failed to parse Claude JSON response. Raw text:",
+    text.substring(0, 500),
+  );
+  throw new Error("Claude returned invalid JSON. Please try again.");
 }
 
 /**
  * Helper: sends a prompt to Claude and parses the JSON response.
  */
-async function callClaudeJson<T>(systemPrompt: string, userPrompt: string, maxTokens: number = 4096): Promise<T> {
+async function callClaudeJson<T>(
+  systemPrompt: string,
+  userPrompt: string,
+  maxTokens: number = 4096,
+): Promise<T> {
   const text = await callClaude(systemPrompt, userPrompt, maxTokens);
   return extractJson<T>(text);
 }
@@ -229,7 +270,11 @@ Return ONLY the JSON object, no other text.`;
 export async function analyzePaper(paperText: string): Promise<PaperAnalysis> {
   const userPrompt = `Analyze the following research paper thoroughly. Extract all implementable details.\n\n--- PAPER TEXT ---\n${paperText}\n--- END PAPER TEXT ---`;
 
-  return callClaudeJson<PaperAnalysis>(ANALYSIS_SYSTEM_PROMPT, userPrompt, 4096);
+  return callClaudeJson<PaperAnalysis>(
+    ANALYSIS_SYSTEM_PROMPT,
+    userPrompt,
+    4096,
+  );
 }
 
 // ─── Pipeline Step 2: Create Implementation Plan ─────────────────────────────
@@ -267,7 +312,7 @@ Return ONLY the JSON object, no other text.`;
 
 export async function createImplementationPlan(
   paperText: string,
-  analysis: PaperAnalysis
+  analysis: PaperAnalysis,
 ): Promise<ImplementationPlan> {
   const userPrompt = `Create a practical implementation plan for this paper.
 
@@ -278,7 +323,11 @@ ${JSON.stringify(analysis, null, 2)}
 ${paperText}
 --- END PAPER TEXT ---`;
 
-  return callClaudeJson<ImplementationPlan>(PLAN_SYSTEM_PROMPT, userPrompt, 4096);
+  return callClaudeJson<ImplementationPlan>(
+    PLAN_SYSTEM_PROMPT,
+    userPrompt,
+    4096,
+  );
 }
 
 // ─── Pipeline Step 3: Generate Notebook ──────────────────────────────────────
@@ -340,7 +389,7 @@ CRITICAL OUTPUT RULES:
 export async function generateNotebook(
   paperText: string,
   analysis: PaperAnalysis,
-  plan: ImplementationPlan
+  plan: ImplementationPlan,
 ): Promise<GeneratedNotebook> {
   const userPrompt = `Generate a complete, runnable Google Colab notebook implementing this paper. Keep it concise but complete — aim for 15-25 cells total.
 
@@ -356,24 +405,35 @@ ${paperText}
 
 Generate the notebook as a JSON array of cells. Return ONLY the raw JSON array — no markdown code fences. Be concise but complete.`;
 
-  const cells = await callClaudeJson<NotebookCell[]>(NOTEBOOK_SYSTEM_PROMPT, userPrompt, 16384);
+  const cells = await callClaudeJson<NotebookCell[]>(
+    NOTEBOOK_SYSTEM_PROMPT,
+    userPrompt,
+    16384,
+  );
 
   // Validate cells
   if (!Array.isArray(cells) || cells.length === 0) {
-    throw new Error('Claude returned invalid notebook cells');
+    throw new Error("Claude returned invalid notebook cells");
   }
 
   for (const cell of cells) {
     if (!cell.cell_type || !cell.source) {
-      throw new Error('Invalid cell structure: each cell must have cell_type and source');
+      throw new Error(
+        "Invalid cell structure: each cell must have cell_type and source",
+      );
     }
-    if (cell.cell_type !== 'markdown' && cell.cell_type !== 'code') {
-      throw new Error(`Invalid cell_type: ${cell.cell_type}. Must be "markdown" or "code".`);
+    if (cell.cell_type !== "markdown" && cell.cell_type !== "code") {
+      throw new Error(
+        `Invalid cell_type: ${cell.cell_type}. Must be "markdown" or "code".`,
+      );
     }
   }
 
   // Build the .ipynb JSON
-  const title = `Implementation_${analysis.title.replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, '_').substring(0, 60)}`;
+  const title = `Implementation_${analysis.title
+    .replace(/[^a-zA-Z0-9\s]/g, "")
+    .replace(/\s+/g, "_")
+    .substring(0, 60)}`;
   const notebook = buildNotebook(cells, title);
 
   return {
@@ -399,18 +459,26 @@ export interface PipelineResult {
  *
  * Each step feeds its output to the next for richer context.
  */
-export async function runFullPipeline(paperText: string): Promise<PipelineResult> {
-  console.log('[Pipeline] Step 1/3: Analyzing paper...');
+export async function runFullPipeline(
+  paperText: string,
+): Promise<PipelineResult> {
+  console.log("[Pipeline] Step 1/3: Analyzing paper...");
   const analysis = await analyzePaper(paperText);
-  console.log(`[Pipeline] Analysis complete. Domain: ${analysis.domain}, Complexity: ${analysis.paperComplexity}`);
+  console.log(
+    `[Pipeline] Analysis complete. Domain: ${analysis.domain}, Complexity: ${analysis.paperComplexity}`,
+  );
 
-  console.log('[Pipeline] Step 2/3: Creating implementation plan...');
+  console.log("[Pipeline] Step 2/3: Creating implementation plan...");
   const plan = await createImplementationPlan(paperText, analysis);
-  console.log(`[Pipeline] Plan complete. ${plan.steps.length} steps, ~${plan.totalEstimatedLines} lines of code`);
+  console.log(
+    `[Pipeline] Plan complete. ${plan.steps.length} steps, ~${plan.totalEstimatedLines} lines of code`,
+  );
 
-  console.log('[Pipeline] Step 3/3: Generating notebook...');
+  console.log("[Pipeline] Step 3/3: Generating notebook...");
   const notebook = await generateNotebook(paperText, analysis, plan);
-  console.log(`[Pipeline] Notebook complete. ${notebook.cells.length} cells generated`);
+  console.log(
+    `[Pipeline] Notebook complete. ${notebook.cells.length} cells generated`,
+  );
 
   return { analysis, plan, notebook };
 }

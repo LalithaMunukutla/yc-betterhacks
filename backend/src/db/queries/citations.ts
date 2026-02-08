@@ -1,54 +1,62 @@
-import { PoolClient } from '@neondatabase/serverless'
-import { query, queryOne } from '../pool'
+import { PoolClient } from "@neondatabase/serverless";
+import { query, queryOne } from "../pool";
 
-interface CitationRow {
-  readonly id: string
-  readonly paper_id: string
-  readonly citation_key: string
-  readonly raw_reference: string | null
-  readonly context_in_paper: string | null
-  readonly cited_title: string | null
-  readonly cited_abstract: string | null
-  readonly cited_authors: readonly string[] | null
-  readonly cited_year: number | null
-  readonly cited_doi: string | null
-  readonly cited_s2_id: string | null
-  readonly relevance_explanation: string | null
-  readonly enriched: boolean
-  readonly enrichment_failed: boolean
-  readonly failure_reason: string | null
-  readonly created_at: string
-  readonly enriched_at: string | null
+export interface CitationRow {
+  readonly id: string;
+  readonly paper_id: string;
+  readonly citation_key: string;
+  readonly raw_reference: string | null;
+  readonly context_in_paper: string | null;
+  readonly cited_title: string | null;
+  readonly cited_abstract: string | null;
+  readonly cited_authors: unknown;
+  readonly cited_year: number | null;
+  readonly cited_doi: string | null;
+  readonly cited_s2_id: string | null;
+  readonly relevance_explanation: string | null;
+  readonly enriched: boolean;
+  readonly enrichment_failed: boolean;
+  readonly failure_reason: string | null;
+  readonly created_at: string;
+  readonly enriched_at: string | null;
 }
 
 export async function insertCitations(
   paperId: string,
-  citations: readonly { citationKey: string; rawReference: string | null; contextInPaper: string | null }[],
+  citations: readonly {
+    citationKey: string;
+    rawReference: string | null;
+    contextInPaper: string | null;
+  }[],
   client?: PoolClient,
 ): Promise<void> {
-  if (citations.length === 0) return
+  if (citations.length === 0) return;
 
-  const values: string[] = []
-  const params: unknown[] = []
-  let paramIndex = 1
+  const values: string[] = [];
+  const params: unknown[] = [];
+  let paramIndex = 1;
 
   for (const c of citations) {
-    values.push(`($${paramIndex}, $${paramIndex + 1}, $${paramIndex + 2}, $${paramIndex + 3})`)
-    params.push(paperId, c.citationKey, c.rawReference, c.contextInPaper)
-    paramIndex += 4
+    values.push(
+      `($${paramIndex}, $${paramIndex + 1}, $${paramIndex + 2}, $${paramIndex + 3})`,
+    );
+    params.push(paperId, c.citationKey, c.rawReference, c.contextInPaper);
+    paramIndex += 4;
   }
 
   const sql = `INSERT INTO citations (paper_id, citation_key, raw_reference, context_in_paper)
-     VALUES ${values.join(', ')}`
+     VALUES ${values.join(", ")}`;
 
   if (client) {
-    await client.query(sql, params)
-    return
+    await client.query(sql, params);
+    return;
   }
-  await query(sql, params)
+  await query(sql, params);
 }
 
-export async function findCitationsByPaperId(paperId: string): Promise<readonly CitationRow[]> {
+export async function findCitationsByPaperId(
+  paperId: string,
+): Promise<readonly CitationRow[]> {
   return query<CitationRow>(
     `SELECT * FROM citations
       WHERE paper_id = $1
@@ -59,7 +67,7 @@ export async function findCitationsByPaperId(paperId: string): Promise<readonly 
         END,
         citation_key`,
     [paperId],
-  )
+  );
 }
 
 export async function findCitation(
@@ -69,22 +77,22 @@ export async function findCitation(
   return queryOne<CitationRow>(
     `SELECT * FROM citations WHERE paper_id = $1 AND citation_key = $2`,
     [paperId, citationKey],
-  )
+  );
 }
 
 export async function updateCitationEnrichment(
   id: string,
   data: {
-    citedTitle: string | null
-    citedAbstract: string | null
-    citedAuthors: readonly string[] | null
-    citedYear: number | null
-    citedDoi: string | null
-    citedS2Id: string | null
-    relevanceExplanation: string | null
-    enriched: boolean
-    enrichmentFailed: boolean
-    failureReason: string | null
+    citedTitle: string | null;
+    citedAbstract: string | null;
+    citedAuthors: unknown;
+    citedYear: number | null;
+    citedDoi: string | null;
+    citedS2Id: string | null;
+    relevanceExplanation: string | null;
+    enriched: boolean;
+    enrichmentFailed: boolean;
+    failureReason: string | null;
   },
 ): Promise<CitationRow | null> {
   return queryOne<CitationRow>(
@@ -115,5 +123,5 @@ export async function updateCitationEnrichment(
       data.enrichmentFailed,
       data.failureReason,
     ],
-  )
+  );
 }

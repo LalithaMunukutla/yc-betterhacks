@@ -1,16 +1,12 @@
 import express, { Request, Response } from 'express'
-import cors from 'cors'
 import { papersRouter } from './routes/papers'
 import { errorHandler } from './middleware/error-handler'
 import { config } from './config';
 import pdfRoutes from './routes/pdf';
 import implementRoutes from './routes/implement';
+import { explainRouter } from './routes/explain';
 
 const app = express();
-
-app.use(cors())
-app.use(express.json({ limit: '5mb' }))
-app.use(express.urlencoded({ extended: true }))
 
 app.get('/health', (_req: Request, res: Response) => {
   res.json({ status: 'ok', message: 'Better Papers API is running' })
@@ -19,10 +15,27 @@ app.get('/health', (_req: Request, res: Response) => {
 app.use('/api/papers', papersRouter)
 
 app.use(errorHandler)
+// Middleware
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Routes
+// CORS
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+  if (req.method === 'OPTIONS') {
+    res.sendStatus(200);
+  } else {
+    next();
+  }
+});
+
+// Routes: existing (extract-pdf, implement-paper, pdf-by-url) + merged (papers, explain)
 app.use('/api', pdfRoutes);
 app.use('/api', implementRoutes);
+app.use('/api/papers', papersRouter);
+app.use('/api/explain', explainRouter);
 
 // Start server
 app.listen(config.port, () => {
