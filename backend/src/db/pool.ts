@@ -1,7 +1,7 @@
 import { Pool, PoolClient } from "@neondatabase/serverless";
-import { env } from "../config/env";
+import { config } from "../config";
 
-export const pool = new Pool({ connectionString: env.DATABASE_URL });
+export const pool = new Pool({ connectionString: config.databaseUrl });
 
 export async function query<T>(text: string, params?: unknown[]): Promise<T[]> {
   const result = await pool.query(text, params);

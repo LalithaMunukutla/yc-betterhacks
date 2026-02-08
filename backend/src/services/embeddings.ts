@@ -1,10 +1,10 @@
 import OpenAI from "openai";
 import { PoolClient } from "@neondatabase/serverless";
-import { env } from "../config/env";
+import { config } from "../config";
 import { query } from "../db/pool";
 import { chunkText } from "../utils/text";
 
-const openai = new OpenAI({ apiKey: env.OPENAI_API_KEY });
+const openai = new OpenAI({ apiKey: config.openaiApiKey });
 
 const EMBEDDING_MODEL = "text-embedding-3-small";
 const BATCH_SIZE = 20;

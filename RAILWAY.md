@@ -48,12 +48,22 @@ A **`Dockerfile`** at the repo root builds the backend (copies from `backend/`).
 4. **Settings** → **Deploy** → **Start Command:** `node dist/index.js`.
 5. Save and **Redeploy**.
 
-### Frontend (second service)
+### Frontend (second service) — same repo, root Dockerfile
 
-For the frontend you still need the build to run inside `frontend/`. Options:
+A **`Dockerfile.frontend`** at the repo root builds and serves the UI. Use it for a second service:
 
-- Use **Root Directory** = `frontend` if it appears anywhere (e.g. under Source after a UI update), or
-- Create a **second service**, connect the same repo, and try again for Root Directory or a root Dockerfile for the frontend (e.g. `Dockerfile.frontend` at root).
+1. In your Railway **project**, click **+ New** → **GitHub Repo** and select the **same repo** again (or **Empty Service** then connect the same repo).
+2. Open the new service → **Settings** → **Build**.
+3. **Builder:** **Dockerfile**.
+4. **Dockerfile Path:** **`Dockerfile.frontend`**.
+5. **Settings** → **Deploy** → **Start Command:** leave empty (the Dockerfile already has `CMD ["serve", "-s", "build"]`).
+6. Open the **Variables** tab and add:
+   - **`REACT_APP_API_URL`** = your backend URL, e.g. `https://your-backend.up.railway.app`  
+   (Use the backend service’s public URL from **Settings → Networking → Domain**.)
+7. Save and **Deploy** (or trigger a redeploy).
+8. In **Settings → Networking**, generate a **public domain** for this service so you can open the UI in the browser.
+
+**Important:** `REACT_APP_API_URL` is used at **build time**. If you change it later, redeploy so the app is rebuilt with the new URL.
 
 ---
 
@@ -61,5 +71,5 @@ For the frontend you still need the build to run inside `frontend/`. Options:
 
 | Service  | Root Directory (Option A) | Fallback (Option B)                    |
 |----------|---------------------------|----------------------------------------|
-| Backend  | `backend`                 | Dockerfile path: `backend/Dockerfile` or root `Dockerfile.backend` |
-| Frontend | `frontend`                | Set Root Directory when available      |
+| Backend  | `backend`                 | Root `Dockerfile` (builds from `backend/`) |
+| Frontend | `frontend`                | Root `Dockerfile.frontend` (builds from `frontend/`) |

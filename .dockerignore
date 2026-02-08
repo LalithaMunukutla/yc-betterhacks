@@ -1,6 +1,7 @@
-# Used when building from repo root (e.g. Dockerfile.backend)
-frontend
+# Used when building from repo root (backend and frontend Dockerfiles)
 .git
+frontend/node_modules
+frontend/build
 .env
 .env.*
 *.md
