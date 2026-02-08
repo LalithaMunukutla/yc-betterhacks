@@ -13,6 +13,7 @@ import {
   CitationSummary,
 } from './services/api';
 
+
 // Types for the implementation result
 interface ImplementationResult {
   colabUrl: string;
@@ -64,6 +65,7 @@ export default function App() {
   const [paperTitle, setPaperTitle] = useState<string>('');
   const [paperPdfUrl, setPaperPdfUrl] = useState<string>('');
   const [paperNumPages, setPaperNumPages] = useState<number>(0);
+  const [paperId, setPaperId] = useState<string | null>(null);
 
   // Outline & navigation
   const [outline, setOutline] = useState<OutlineItem[]>([]);
@@ -80,8 +82,7 @@ export default function App() {
   const [implementResult, setImplementResult] = useState<ImplementationResult | null>(null);
   const [implementError, setImplementError] = useState<string>('');
 
-  // Citation state
-  const [paperId, setPaperId] = useState<string | null>(null);
+  // Citation state (paperId is set above; citations from storePaper)
   const [citations, setCitations] = useState<CitationSummary[]>([]);
 
   // Panel visibility
@@ -102,7 +103,6 @@ export default function App() {
     setImplementError('');
 
     try {
-      // Create a local object URL for PDF rendering (images/formulas preserved).
       const nextPdfUrl = URL.createObjectURL(file);
       setPaperPdfUrl((prev) => {
         if (prev) URL.revokeObjectURL(prev);
@@ -117,7 +117,7 @@ export default function App() {
       setPaperNumPages(result.numPages || 0);
       setAppState('reading');
 
-      // Fire-and-forget: store paper for citation extraction
+      // Fire-and-forget: store paper for citation extraction (sets paperId when done)
       storePaper(extractedText, extractedTitle)
         .then((stored) => {
           setPaperId(stored.id);
@@ -227,6 +227,7 @@ export default function App() {
     setPaperText('');
     setPaperTitle('');
     setPaperNumPages(0);
+    setPaperId(null);
     setPaperPdfUrl((prev) => {
       if (prev) URL.revokeObjectURL(prev);
       return '';
