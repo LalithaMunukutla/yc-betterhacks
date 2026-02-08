@@ -133,6 +133,8 @@ export async function storePaper(
       },
     });
   } catch (error) {
+    // Log DB/validation errors so Railway logs show the real cause
+    console.error("[storePaper] error:", error);
     next(error);
   }
 }
